@@ -114,7 +114,9 @@ function paramsDec(myParams, argumentsVal) {
     let k = 0 ;
     while (k < myParams.length) {
         paramsOrder[k] = myParams[k].name;
-        inputVec[myParams[k].name] = rigth(argumentsVal.body[0].expression.expressions[k], paramsOrder[k]) ;
+        if (argumentsVal.body[0].expression.expressions[k].type == 'ArrayExpression'){
+            rigth(argumentsVal.body[0].expression.expressions[k], paramsOrder[k], true) ;}
+        else inputVec[myParams[k].name] = rigth(argumentsVal.body[0].expression.expressions[k], paramsOrder[k], true) ;
         k++;
     }
 }
@@ -122,25 +124,26 @@ function paramsDec(myParams, argumentsVal) {
 //variable declaration
 function VariableDec (parseCode, i, global) {
     let k = 0 ;
-    let value ;
+    let value ; let name ;
     while (k < parseCode[i].declarations.length) {
+        name = parseCode[i].declarations[k].id.name ;
         //value
         if (parseCode[i].declarations[k].init == null){
             value = null; }
-        else {value = rigth(parseCode[i].declarations[k].init) ; }
-
+        else {value = rigth(parseCode[i].declarations[k].init, name, global) ;}
         //insert into dict
         if (global == true){
-            inputVec[parseCode[i].declarations[k].id.name] = value;
+            inputVec[name] = value;
         }
         else {
-            localDec[parseCode[i].declarations[k].id.name] = value ;
+            if (parseCode[i].declarations[k].init.type != 'ArrayExpression')
+                localDec[name] = value ;
             if (!(inputVec.hasOwnProperty(parseCode[i].declarations[k].id.name)))
                 lines[(parseCode[i].loc.start.line)-1] = '~' ;
         }
         k++;
-    }
-}
+    }}
+
 
 //assignment expression
 function AssignmentExp (parseCode, global) {
@@ -156,7 +159,6 @@ function AssignmentExp (parseCode, global) {
         value = name+' - '+  rigth (parseCode.right) ;}
     else{ value = rigth (parseCode.right);}
 
-    //dictionary input ////////////////NEEDED????/////////////////
     if (global == true){
         inputVec[name] = value;}
     else {
@@ -166,8 +168,6 @@ function AssignmentExp (parseCode, global) {
         else {
             inputVec[name] = value ;
             lines[(parseCode.loc.start.line)-1] = name + ' = ' + value ; } }
-    /////////////////////////////////////////////////
-    //if (!inputVec.contains(name))
 }
 
 
@@ -187,7 +187,7 @@ function updateState(parseCode, global) {
             lines[(parseCode.loc.start.line)-1] = '~'; }
 }
 
-function rigth (parseCode, nameArray){
+function rigth (parseCode, nameArray, global){
     let state = parseCode.type ;
     if (state =='Literal'){     //number
         return parseCode.value;}
@@ -198,7 +198,7 @@ function rigth (parseCode, nameArray){
     else if (state == 'BinaryExpression'){
         return calculateBinary (escodegen.generate(parseCode));}
     else if (state == 'MemberExpression'){ return calculateArray(parseCode);}
-    else if (state == 'ArrayExpression'){return entereArray(parseCode, nameArray);}
+    else if (state == 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
 }
 
 
@@ -215,23 +215,25 @@ function calculateBinary(parseCode) {
 }
 
 
-function calculateArray(parseCode){
+function calculateArray(parseCode, global){
     if (parseCode.property.type== 'SequenceExpression'){
         let splitArr = parseCode.property.expressions;
         for (let c = 0 ; c <splitArr.length ; c ++){
             let name = parseCode.object.name + '['+c+']';
-            localDec[name] = rigth(parseCode.property.expressions[c]);
+            localDec[name] = rigth(parseCode.property.expressions[c], parseCode.object.name, global );
         }
     }
-    else return parseCode.object.name + '[' + rigth(parseCode.property) + ']' ;
+    else return parseCode.object.name + '[' + rigth(parseCode.property, parseCode.object.name, global ) + ']' ;
 }
 
 
-function entereArray(parseCode, arrayName){
+function entereArray(parseCode, arrayName, global){
     let splitArr = parseCode.elements;
     for (let c = 0 ; c <splitArr.length ; c ++){
         let name = arrayName + '['+ c + ']';
-        localDec[name] = rigth(parseCode.elements[c]);
+        if (global)
+            inputVec[name] = rigth(parseCode.elements[c], arrayName, global)
+        else localDec[name] = rigth(parseCode.elements[c], arrayName, global);
     }
 }
 
