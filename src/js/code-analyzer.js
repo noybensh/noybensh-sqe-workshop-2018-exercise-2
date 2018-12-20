@@ -45,7 +45,7 @@ const myMain = (parseCode, argValue)=>{
 const first = (parseCode, argumentsVal)=>{
     let codeLen = 0 ;
     while ( codeLen < parseCode.body.length) {
-        if (parseCode.body.length > 0 && parseCode.body[codeLen].type == 'FunctionDeclaration') {
+        if (parseCode.body.length > 0 && parseCode.body[codeLen].type === 'FunctionDeclaration') {
             myBody = parseCode.body[codeLen].body.body;
             myParams = parseCode.body[codeLen].params;
             //myFunctions = parseCode.body[codeLen];
@@ -66,12 +66,12 @@ const first = (parseCode, argumentsVal)=>{
 const myParse = (parseCode, i , global) => {
     for (i ; i <parseCode.length ; i++){
         let statment =  parseCode[i].type;
-        if (statment == 'FunctionDeclaration')
+        if (statment === 'FunctionDeclaration')
             return i;
-        else if (statment == 'VariableDeclaration'){
+        else if (statment === 'VariableDeclaration'){
             VariableDec(parseCode, i, global);
             continue;}
-        else if (statment == 'ExpressionStatement'){
+        else if (statment === 'ExpressionStatement'){
             AssignmentExp (parseCode[i].expression, global);
             continue;}
         else{
@@ -84,16 +84,16 @@ const myParse = (parseCode, i , global) => {
 
 const myParse2 = (parseCode, i, global) => {
     let statment =  parseCode[i].type;
-    if (statment == 'IfStatement'){
+    if (statment === 'IfStatement'){
         IfState(parseCode[i], i, global);
         return ;}
-    else if (statment == 'WhileStatement'){
+    else if (statment === 'WhileStatement'){
         WhileState(parseCode[i], global);
         return ;}
-    else if (statment == 'ReturnStatement'){
+    else if (statment === 'ReturnStatement'){
         ReturnState(parseCode, i);
         return;}
-    else if (statment == 'BlockStatement'){
+    else if (statment === 'BlockStatement'){
         let temp = copyDict(localDec);
         myParse(parseCode[i].body, 0, global);
         localDec = deepcopy(temp);
@@ -107,7 +107,7 @@ function paramsDec(myParams, argumentsVal) {
     let k = 0 ;
     while (k < myParams.length) {
         paramsOrder[k] = myParams[k].name;
-        if (argumentsVal.body[0].expression.expressions[k].type == 'ArrayExpression'){
+        if (argumentsVal.body[0].expression.expressions[k].type === 'ArrayExpression'){
             rigth(argumentsVal.body[0].expression.expressions[k], paramsOrder[k], true) ;}
         else inputVec[myParams[k].name] = rigth(argumentsVal.body[0].expression.expressions[k], paramsOrder[k], true) ;
         k++;
@@ -131,11 +131,11 @@ function VariableDec (parseCode, i, global) {
 
 
 function VariableDecInsertToDict(parseCode, i, global, name, value, k){
-    if (global == true){
+    if (global === true){
         inputVec[name] = value;
     }
     else {
-        if (parseCode[i].declarations[k].init.type != 'ArrayExpression')
+        if (parseCode[i].declarations[k].init.type !== 'ArrayExpression')
             localDec[name] = value ;
         if (!(inputVec.hasOwnProperty(parseCode[i].declarations[k].id.name)))
             lines[(parseCode[i].loc.start.line)-1] = '~' ;
@@ -207,8 +207,8 @@ function rigth (parseCode, nameArray, global){
 }
 
 function rigthCon (parseCode, nameArray, global, state){
-    if (state == 'MemberExpression'){ return calculateArray(parseCode);}
-    else if (state == 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
+    if (state === 'MemberExpression'){ return calculateArray(parseCode);}
+    else if (state === 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
     else return ;
 }
 
@@ -227,7 +227,7 @@ function calculateBinary(parseCode) {
 
 
 function calculateArray(parseCode, global){
-    if (parseCode.property.type== 'SequenceExpression'){
+    if (parseCode.property.type=== 'SequenceExpression'){
         let splitArr = parseCode.property.expressions;
         for (let c = 0 ; c <splitArr.length ; c ++){
             let name = parseCode.object.name + '['+c+']';
@@ -259,7 +259,7 @@ function IfState (parseCode, i, global){
         lines[(parseCode.loc.start.line)-1] = '@'+ content;
     let a=[];
     a.push(parseCode.consequent);
-    if (parseCode.type == 'BlockStatement'|| a[0].type == 'BlockStatement'){
+    if (parseCode.type === 'BlockStatement'|| a[0].type === 'BlockStatement'){
         myParse(a[0].body, 0, global);}
     else myParse(a, i, global, true);
     localDec = deepcopy(tempDict) ;
@@ -272,7 +272,7 @@ function IfState (parseCode, i, global){
 function elseState (parseCode, global){
     let a=[];
     let line = parseCode.loc.start.line ;
-    if (parseCode.type =='IfStatement'){    //'else if statement'
+    if (parseCode.type ==='IfStatement'){    //'else if statement'
         let tempLocalDictIfElse = deepcopy(localDec);
         let condition = conditionParse (parseCode);
         let content = ifWhileLine(parseCode, condition);
@@ -338,12 +338,12 @@ function conditionParseToEval (parseCode) {
 
 function getValue (parseCode) {
     let state = parseCode.type;
-    if (state == 'Identifier') {     //name
+    if (state === 'Identifier') {     //name
         return getValueIdenti(parseCode);
     }
-    if (state == 'Literal') {     //number
+    if (state === 'Literal') {     //number
         return parseCode.value;}
-    else if (state == 'BinaryExpression') {
+    else if (state === 'BinaryExpression') {
         return '( ' + getValue(parseCode.left) + ' ' + parseCode.operator + ' ' + getValue(parseCode.right) + ' )';
     }
     else return getValueCon(parseCode, state);
@@ -351,7 +351,7 @@ function getValue (parseCode) {
 
 
 function getValueCon(parseCode, state){
-    if (state == 'MemberExpression') {
+    if (state === 'MemberExpression') {
         let key = parseCode.object.name + '[' + getValue(parseCode.property) + ']';
         if (inputVec.hasOwnProperty(key))
             return inputVec[key];
@@ -416,11 +416,11 @@ function printCode (lines){
 function printCodeGreenRed (str) {
     let first = str.substring(0, 1);
     let colorStr = str.substring(1);
-    if(first == '$'){
+    if(first === '$'){
         colorStr=colorStr.split('<').join(' < ');
         return '<a style="background-color:green;">'+colorStr.split(' ').join('&nbsp ')+'</a>';
     }
-    else if(first == '@'){
+    else if(first === '@'){
         colorStr=colorStr.split('<').join(' < ');
         return '<a style="background-color:red;">'+colorStr.split(' ').join('&nbsp ')+'</a>';
     }
