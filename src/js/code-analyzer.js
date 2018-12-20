@@ -7,10 +7,10 @@ export {myMain};
 
 
 
-let j ;
+//let j ;
 let myBody = [];
 let myParams = [];
-let myFunctions = [];
+//let myFunctions = [];
 let place ;
 let inputVec = {} ;
 let paramsOrder = {} ;
@@ -20,10 +20,10 @@ let content ;
 
 
 function constructor(){
-    place = 0 ;  j = 1 ;
+    place = 0 ; // j = 1 ;
     myBody = new Array();
     myParams = new Array();
-    myFunctions = new Array();
+    //myFunctions = new Array();
     content = null;
 }
 
@@ -48,12 +48,10 @@ const first = (parseCode, argumentsVal)=>{
         if (parseCode.body.length > 0 && parseCode.body[codeLen].type == 'FunctionDeclaration') {
             myBody = parseCode.body[codeLen].body.body;
             myParams = parseCode.body[codeLen].params;
-            myFunctions = parseCode.body[codeLen];
-            FunctionDec(myFunctions);
+            //myFunctions = parseCode.body[codeLen];
             paramsDec(myParams, argumentsVal);
             myParse(myBody, 0, false);
-            codeLen ++ ;
-        }
+            codeLen ++ ;}
         else {
             myBody = parseCode.body;
             if (codeLen > place)
@@ -105,11 +103,6 @@ const myParse2 = (parseCode, i, global) => {
 };
 
 
-//function declaration
-function FunctionDec(parseCode) {
-
-}
-
 function paramsDec(myParams, argumentsVal) {
     let k = 0 ;
     while (k < myParams.length) {
@@ -130,28 +123,35 @@ function VariableDec (parseCode, i, global) {
         //value
         if (parseCode[i].declarations[k].init == null){
             value = null; }
-        else {value = rigth(parseCode[i].declarations[k].init, name, global) ;}
+        else {value = rigth(parseCode[i].declarations[k].init, name, global, name, value, k) ;}
         //insert into dict
-        if (global == true){
-            inputVec[name] = value;
-        }
-        else {
-            if (parseCode[i].declarations[k].init.type != 'ArrayExpression')
-                localDec[name] = value ;
-            if (!(inputVec.hasOwnProperty(parseCode[i].declarations[k].id.name)))
-                lines[(parseCode[i].loc.start.line)-1] = '~' ;
-        }
+        VariableDecInsertToDict(parseCode, i, global, name, value, k);
         k++;
     }}
 
 
+function VariableDecInsertToDict(parseCode, i, global, name, value, k){
+    if (global == true){
+        inputVec[name] = value;
+    }
+    else {
+        if (parseCode[i].declarations[k].init.type != 'ArrayExpression')
+            localDec[name] = value ;
+        if (!(inputVec.hasOwnProperty(parseCode[i].declarations[k].id.name)))
+            lines[(parseCode[i].loc.start.line)-1] = '~' ;
+    }
+}
+
 //assignment expression
 function AssignmentExp (parseCode, global) {
-    if (parseCode.type == 'UpdateExpression'){
+    /*if (parseCode.type == 'UpdateExpression'){
         updateState(parseCode, global);
         return;}
-    let value ;
+    */let value ;
     let name = parseCode.left.name;
+    if (parseCode.left.type =='MemberExpression'){
+        name = parseCode.left.object.name + '['+parseCode.left.property.value+']';
+    }
     //value value
     if (parseCode.operator == '+='){
         value = name+' + '+  rigth (parseCode.right) ;}
@@ -159,6 +159,11 @@ function AssignmentExp (parseCode, global) {
         value = name+' - '+  rigth (parseCode.right) ;}
     else{ value = rigth (parseCode.right);}
 
+    AssignmentExpInsertToDict(parseCode, global, name, value);
+}
+
+
+function AssignmentExpInsertToDict (parseCode, global, name, value ){
     if (global == true){
         inputVec[name] = value;}
     else {
@@ -171,22 +176,22 @@ function AssignmentExp (parseCode, global) {
 }
 
 
-function updateState(parseCode, global) {
+/*function updateState(parseCode, global) {
     let value ;
     //value
-    if (updateVal(parseCode) == null){
+    /*if (updateVal(parseCode) == null){
         value = null; }
     else {value = updateVal(parseCode) ; }
-
-    //insert into dict
-    if (global == true){
+*/
+//insert into dict
+/*  if (global == true){
         inputVec[parseCode.argument.name] = value;}
     else {
         localDec[parseCode.argument.name] = value ;
         if (!(inputVec.hasOwnProperty(parseCode.argument.name)))
             lines[(parseCode.loc.start.line)-1] = '~'; }
 }
-
+*/
 function rigth (parseCode, nameArray, global){
     let state = parseCode.type ;
     if (state =='Literal'){     //number
@@ -197,8 +202,14 @@ function rigth (parseCode, nameArray, global){
         else return ('( ' + localDec[parseCode.name] + ' )');}
     else if (state == 'BinaryExpression'){
         return calculateBinary (escodegen.generate(parseCode));}
-    else if (state == 'MemberExpression'){ return calculateArray(parseCode);}
+    else return rigthCon(parseCode, nameArray, global, state);
+
+}
+
+function rigthCon (parseCode, nameArray, global, state){
+    if (state == 'MemberExpression'){ return calculateArray(parseCode);}
     else if (state == 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
+    else return ;
 }
 
 
@@ -232,7 +243,7 @@ function entereArray(parseCode, arrayName, global){
     for (let c = 0 ; c <splitArr.length ; c ++){
         let name = arrayName + '['+ c + ']';
         if (global)
-            inputVec[name] = rigth(parseCode.elements[c], arrayName, global)
+            inputVec[name] = rigth(parseCode.elements[c], arrayName, global);
         else localDec[name] = rigth(parseCode.elements[c], arrayName, global);
     }
 }
@@ -261,39 +272,29 @@ function IfState (parseCode, i, global){
 function elseState (parseCode, global){
     let a=[];
     let line = parseCode.loc.start.line ;
-    //let elseIfGreen = false ;
     if (parseCode.type =='IfStatement'){    //'else if statement'
         let tempLocalDictIfElse = deepcopy(localDec);
         let condition = conditionParse (parseCode);
         let content = ifWhileLine(parseCode, condition);
-        if (conditionParseToEval(parseCode))
-            lines[line-1] = '$'+ content;
-        else
-            lines[line-1] = '@'+ content;
+        if (conditionParseToEval(parseCode)) lines[line-1] = '$'+ content;
+        else lines[line-1] = '@'+ content;
         a.push(parseCode.consequent);
         localDec = deepcopy(tempLocalDictIfElse); }
     else{                      //else statement
         let tempLocalElse = deepcopy(localDec);
         a.push(parseCode);
         localDec = deepcopy(tempLocalElse);}
-
     if (parseCode.alternate != null){
         a.push(parseCode.alternate);}
-    //if (a[0].type == 'BlockStatement'){
-        let tempDec = deepcopy(localDec);
-        myParse(a, 0, global);
-        localDec = deepcopy(tempDec);//}
-    //else {myParse(a, 0, global);}
-}
+    let tempDec = deepcopy(localDec);
+    myParse(a, 0, global);
+    localDec = deepcopy(tempDec);}
 
 function copyDict() {
     let tempSaveDict =deepcopy(localDec);
     return tempSaveDict ;
 }
 
-function copyToLocalDict (temp){
-    localDec = deepcopy(temp);
-}
 
 const deepcopy = (validJSON) => {
     return JSON.parse(JSON.stringify(validJSON));
@@ -327,12 +328,6 @@ function ifWhileLine (parseCode, condition){
 }
 
 
-function evalute(parseCode){
-    let str = '' ;
-
-    str = str + getValue(parseCode);
-}
-
 function conditionParseToEval (parseCode) {
     let leftCon = parseCode.test.left;
     let rigthCon = parseCode.test.right;
@@ -343,44 +338,55 @@ function conditionParseToEval (parseCode) {
 
 function getValue (parseCode) {
     let state = parseCode.type;
+    if (state == 'Identifier') {     //name
+        return getValueIdenti(parseCode);
+    }
     if (state == 'Literal') {     //number
-        return parseCode.value;
-    }
-    else if (state == 'Identifier') {     //name
-        if (inputVec.hasOwnProperty(parseCode.name))
-            return inputVec[parseCode.name];
-        else {
-            let temp = localDec[parseCode.name].split(' ');
-            let str = '';
-            for (let t = 0; t < temp.length; t++) {
-                if (inputVec.hasOwnProperty(temp[t]))
-                    str = str + inputVec[temp[t]];
-                else if (localDec.hasOwnProperty(temp[t]))
-                    str = str + localDec[temp[t]];
-                else str = str + temp [t];
-            }
-            return ('( ' + str + ' )');
-        }
-    }
+        return parseCode.value;}
     else if (state == 'BinaryExpression') {
         return '( ' + getValue(parseCode.left) + ' ' + parseCode.operator + ' ' + getValue(parseCode.right) + ' )';
     }
-    else if (state == 'MemberExpression') {
+    else return getValueCon(parseCode, state);
+}
+
+
+function getValueCon(parseCode, state){
+    if (state == 'MemberExpression') {
         let key = parseCode.object.name + '[' + getValue(parseCode.property) + ']';
         if (inputVec.hasOwnProperty(key))
             return inputVec[key];
         else return ('( ' + localDec[key] + ' )');
 
     }
+    else return ;
 }
 
 
-function updateVal(parseCode){
-  /*  if (parseCode.operator == '++'){
+function getValueIdenti(parseCode){
+    if (inputVec.hasOwnProperty(parseCode.name))
+        return inputVec[parseCode.name];
+    else {
+        let temp = localDec[parseCode.name].split(' ');
+        let str = '';
+        for (let t = 0; t < temp.length; t++) {
+            if (inputVec.hasOwnProperty(temp[t]))
+                str = str + inputVec[temp[t]];
+            else if (localDec.hasOwnProperty(temp[t]))
+                str = str + localDec[temp[t]];
+            else str = str + temp [t];
+        }
+        return ('( ' + str + ' )');
+    }
+}
+
+
+
+/*function updateVal(parseCode){
+    if (parseCode.operator == '++'){
         value[j] = name[j] + ' + 1'; }
     else if (parseCode.operator == '--'){
         value[j] = name[j] + ' - 1'; }
-*/}
+}*/
 
 function ReturnState (parseCode, i) {
     /*line [j] = parseCode[i].loc.start.line;
@@ -394,8 +400,6 @@ function ReturnState (parseCode, i) {
     content = 'return '+ value ;
     lines[(parseCode[i].loc.start.line)-1] = content ;
 }
-
-
 
 
 function printCode (lines){
