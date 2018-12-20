@@ -98,8 +98,8 @@ const myParse2 = (parseCode, i, global) => {
         myParse(parseCode[i].body, 0, global);
         localDec = deepcopy(temp);
         return;}
-    else{
-        return ; }
+    //else{
+    //  return ; }
 };
 
 
@@ -135,7 +135,7 @@ function VariableDecInsertToDict(parseCode, i, global, name, value, k){
         inputVec[name] = value;
     }
     else {
-        if (parseCode[i].declarations[k].init.type !== 'ArrayExpression')
+        if (parseCode[i].declarations[k].init != null && parseCode[i].declarations[k].init.type !== 'ArrayExpression')
             localDec[name] = value ;
         if (!(inputVec.hasOwnProperty(parseCode[i].declarations[k].id.name)))
             lines[(parseCode[i].loc.start.line)-1] = '~' ;
@@ -208,8 +208,9 @@ function rigth (parseCode, nameArray, global){
 
 function rigthCon (parseCode, nameArray, global, state){
     if (state === 'MemberExpression'){ return calculateArray(parseCode);}
-    else if (state === 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
-    else return ;
+    //else if (state === 'ArrayExpression'){return entereArray(parseCode, nameArray, global);}
+    return entereArray(parseCode, nameArray, global);
+    //else return ;
 }
 
 
@@ -227,7 +228,8 @@ function calculateBinary(parseCode) {
 
 
 function calculateArray(parseCode, global){
-    if (parseCode.property.type=== 'SequenceExpression'){
+    return parseCode.object.name + '[' + rigth(parseCode.property, parseCode.object.name, global ) + ']' ;
+    /*if (parseCode.property.type=== 'SequenceExpression'){
         let splitArr = parseCode.property.expressions;
         for (let c = 0 ; c <splitArr.length ; c ++){
             let name = parseCode.object.name + '['+c+']';
@@ -235,7 +237,7 @@ function calculateArray(parseCode, global){
         }
     }
     else return parseCode.object.name + '[' + rigth(parseCode.property, parseCode.object.name, global ) + ']' ;
-}
+*/}
 
 
 function entereArray(parseCode, arrayName, global){
@@ -358,14 +360,14 @@ function getValueCon(parseCode, state){
         else return ('( ' + localDec[key] + ' )');
 
     }
-    else return ;
+    //else return ;
 }
 
 
 function getValueIdenti(parseCode){
-    if (inputVec.hasOwnProperty(parseCode.name))
+    //if (inputVec.hasOwnProperty(parseCode.name))
         return inputVec[parseCode.name];
-    else {
+    /*else {
         let temp = localDec[parseCode.name].split(' ');
         let str = '';
         for (let t = 0; t < temp.length; t++) {
@@ -376,7 +378,7 @@ function getValueIdenti(parseCode){
             else str = str + temp [t];
         }
         return ('( ' + str + ' )');
-    }
+    }*/
 }
 
 
@@ -395,37 +397,11 @@ function ReturnState (parseCode, i) {
     let value;
     if ( !(inputVec.hasOwnProperty(parseCode[i].argument)))
         value = rigth(parseCode[i].argument);
-    else value = parseCode[i].argument ;
+    //else value = parseCode[i].argument ;
     //value = replaceVal (value);
     content = 'return '+ value ;
     lines[(parseCode[i].loc.start.line)-1] = content ;
 }
 
 
-function printCode (lines){
-    let stringToPrint =  '';
-    for (let i = 0 ; i < lines.length ; i ++ ){
-        if (lines[i] != '~'){
-            stringToPrint = stringToPrint + printCodeGreenRed(lines[i]) + '</br>' ;
-        }
-    }
-    return stringToPrint ;
-}
 
-
-function printCodeGreenRed (str) {
-    let first = str.substring(0, 1);
-    let colorStr = str.substring(1);
-    if(first === '$'){
-        colorStr=colorStr.split('<').join(' < ');
-        return '<a style="background-color:green;">'+colorStr.split(' ').join('&nbsp ')+'</a>';
-    }
-    else if(first === '@'){
-        colorStr=colorStr.split('<').join(' < ');
-        return '<a style="background-color:red;">'+colorStr.split(' ').join('&nbsp ')+'</a>';
-    }
-    else {
-        str = str.replace('<', ' < ');
-        return '<a>'+str.split(' ').join('&nbsp ')+'</a>';
-    }
-}
