@@ -2,7 +2,7 @@ import * as esprima from 'esprima';
 import * as escodegen from 'escodegen';
 export {parseCode};
 export {first};
-export {printCode};
+//export {printCode};
 export {myMain};
 
 
@@ -366,7 +366,7 @@ function getValueCon(parseCode, state){
 
 function getValueIdenti(parseCode){
     //if (inputVec.hasOwnProperty(parseCode.name))
-        return inputVec[parseCode.name];
+    return inputVec[parseCode.name];
     /*else {
         let temp = localDec[parseCode.name].split(' ');
         let str = '';
